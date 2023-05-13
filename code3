@@ -1,0 +1,328 @@
+// Starting of Program
+
+int in1 = A0;
+int input1;
+int in2 = A2;
+int input2;
+
+int left=0;
+int right=0;
+int forward=0;
+int tempforward=0;
+int ON=0;
+
+//int cal=0;
+//int car=0;
+
+const int leftThreshold = 300;
+const int rightThreshold = 600;
+const int forwardThreshold = 450; //add value here
+const int forwardTemp=550;
+
+//motor controls-
+
+int m1a=5;
+int m1b=6;
+int m2a=10;
+int m2b=11;
+
+
+int blinkCount=0;
+
+unsigned long startTime=0;
+unsigned long startTime2=0;
+const unsigned long TimeWindow=2000;//1sec
+
+void setup() 
+{  
+  pinMode(in1,INPUT);
+  pinMode(in2,INPUT);
+  pinMode(m1a, OUTPUT);  // Digital pin 10 set as output Pin
+  pinMode(m1b, OUTPUT);  // Digital pin 11 set as output Pin
+  pinMode(m2a, OUTPUT);  // Digital pin 12 set as output Pin
+  pinMode(m2b, OUTPUT);  // Digital pin 13 set as output Pin
+  digitalWrite(2,HIGH); //ENB
+  digitalWrite(3,HIGH); //ENA
+  Serial.begin(9600);
+  delay(3000);
+}
+
+//m1 = left motor (moves right)
+//m2=  right motor 
+
+void loop()
+{
+  delay(5);
+  
+  startTime=millis();
+  
+//  analogWrite(m1a,210);
+//  analogWrite(m1b,0);
+//  analogWrite(m2a,210);
+//  analogWrite(m2b,0);
+
+  function();
+
+}
+
+
+void function(){
+  while(1){
+    unsigned long currentTime=millis();
+
+  if(currentTime-startTime>=TimeWindow){
+//    Serial.println(blinkCount);
+    blinkCount=0;
+    startTime=currentTime;
+  }
+
+  if(currentTime-startTime2>=4100){
+//    Serial.println(blinkCount);
+    startTime2=currentTime;
+  }
+    
+    input1 = analogRead(in1);// left-right
+    input2 = analogRead(in2);//forward-stop
+    
+//    delay(10);
+
+    while(analogRead(in2)<forwardThreshold){
+      if(tempforward==0){      
+        blinkCount++;
+        tempforward=1;
+      }
+    }
+    tempforward=0;
+
+    if (blinkCount>4 && ON==0)
+   {ON=1;
+    blinkCount=0;
+   }
+   else
+   if(blinkCount==0 && ON==1 && currentTime-startTime2>3950 && forward==0 && left==0 && right==0)
+   {ON=0;
+    blinkCount=0;
+   }
+
+    if(ON)
+    {
+    if(blinkCount>=3 && forward==0){
+      forward=1;
+      left=0;
+      right=0;
+      blinkCount=0;
+//      delay(5);
+    }
+    else
+    if(blinkCount>=2 && forward==1){
+      forward=0;
+      left=0;
+      right=0;
+      blinkCount=0;
+//      delay(5);
+    }
+    
+ 
+    delay(5);
+    
+    Serial.println(input1);
+//    Serial.println(input2);
+        logic(input1, input2);
+    } 
+    
+    Serial.print("ON=");Serial.println(ON);
+    Serial.print("ON=");Serial.println(ON);
+    
+    }  
+  }
+
+
+void logic(int input1, int input2){
+  Serial.print("left=");Serial.println(left);
+  Serial.print("right=");Serial.println(right);
+  Serial.print("forward=");Serial.println(forward);
+  
+  
+  if(forward == 0){
+    
+    if(left==0 && right==0){
+      
+      //center
+      
+      if(input1 < leftThreshold){
+        left=1;
+        delay(2);
+        digitalWrite(m1a,LOW);
+        digitalWrite(m1b,LOW);
+        digitalWrite(m2a,HIGH);
+        digitalWrite(m2b,LOW);
+        Serial.println("stopped left");//using both motors for left and right
+      }
+      else if(input1 > rightThreshold){
+        right=1;
+        delay(2);
+        digitalWrite(m1a,HIGH);
+        digitalWrite(m1b,LOW);
+        digitalWrite(m2a,LOW);
+        digitalWrite(m2b,LOW);
+        Serial.println("stopped right");
+      }
+      else{
+        delay(2);
+        digitalWrite(m1a,LOW);
+        digitalWrite(m1b,LOW);
+        digitalWrite(m2a,LOW);
+        digitalWrite(m2b,LOW);
+        Serial.println("stopped center");//stopped
+      }
+    
+    }
+  
+    if(left==1 &&right==0){
+      if(input1 > rightThreshold){
+        left=0;
+        right=0;
+        delay(10);
+        
+        while(analogRead(in1) > 600){
+          digitalWrite(m1a,LOW);
+          digitalWrite(m1b,LOW);
+          digitalWrite(m2a,LOW);
+          digitalWrite(m2b,LOW);
+          Serial.println("stopped center After left");
+          delay(2);
+        }
+      }
+      else{
+        digitalWrite(m1a,LOW);
+        digitalWrite(m1b,LOW);
+        digitalWrite(m2a,HIGH);
+        digitalWrite(m2b,LOW);
+        Serial.println("stopped left");
+      }
+    
+    }
+  
+    if(left==0 && right==1){
+      if(input1 < leftThreshold){
+        right=0;
+        left=0;
+        delay(10);
+        while(analogRead(in1) < leftThreshold){
+        digitalWrite(m1a,LOW);
+        digitalWrite(m1b,LOW);
+        digitalWrite(m2a,LOW);
+        digitalWrite(m2b,LOW);        
+          
+        Serial.println("stopped center After right");
+        delay(2);
+        }
+      }
+      else{
+        digitalWrite(m1a,HIGH);
+        digitalWrite(m1b,LOW);
+        digitalWrite(m2a,LOW);
+        digitalWrite(m2b,LOW);
+        Serial.println("stopped right");
+      }
+    
+    }
+  }
+  
+  else if(forward == 1) {
+//    if(left==0 && right==0){
+//      
+//      //center
+//      
+//      if(input1 < leftThreshold){
+//        left=1;
+//        delay(2);
+//
+//        // check this analogWrite code as it is possible that we need to change some circuitary 
+//        //    and understand how exactly the motor driver is working. below code is only for algo purpose
+//        
+//        analogWrite(m1a,255);
+//        analogWrite(m1b,0);
+//        analogWrite(m2a,0);
+//        analogWrite(m2b,0);
+//        Serial.println("forward left");
+//      
+//      }
+//      else if(input1 > rightThreshold){
+//        right=1;
+//        delay(2);
+//        analogWrite(m1a,0);
+//        analogWrite(m1b,0);
+//        analogWrite(m2a,255);
+//        analogWrite(m2b,0);
+//        Serial.println("forward right");
+//      }
+//      else{
+//        delay(2);
+//        analogWrite(m1a,255);
+//        analogWrite(m1b,0);
+//        analogWrite(m2a,255);
+//        analogWrite(m2b,0);
+//        Serial.println("forward center");
+//      }
+//    
+//    }
+//  
+//    if(left==1 &&right==0){
+//      if(input1 > rightThreshold){
+//        left=0;
+//        right=0;
+//        delay(10);
+//        
+//        while(analogRead(in1) > 600){
+//          digitalWrite(m1a,HIGH);
+//          digitalWrite(m1b,LOW);
+//          analogWrite(m2a,HIGH);
+//          digitalWrite(m2b,LOW);
+//          Serial.println("forward center After left");
+//          delay(2);
+//        }
+//      }
+//      else{
+//        analogWrite(m1a,255);
+//        analogWrite(m1b,0);
+//        analogWrite(m2a,0);
+//        analogWrite(m2b,0);
+//        Serial.println("forward left");
+//      }
+//    
+//    }
+//  
+//    if(left==0 && right==1){
+//      if(input1 < leftThreshold){
+//        right=0;
+//        left=0;
+//        delay(10);
+//        while(analogRead(in1) < leftThreshold){
+//        digitalWrite(m1a,HIGH);
+//        digitalWrite(m1b,LOW);
+//        digitalWrite(m2a,HIGH);
+//        digitalWrite(m2b,LOW);        
+//          
+//        Serial.println("forward center After right");
+//        delay(2);
+//        }
+//      }
+//      else{
+//        analogWrite(m1a,0);
+//        analogWrite(m1b,0);
+//        analogWrite(m2a,255);
+//        analogWrite(m2b,0);
+//        Serial.println("forward right");
+//      }
+//    }
+//  }
+  analogWrite(m1a,255);       
+  analogWrite(m1b,0);        
+  analogWrite(m2a,255);
+  analogWrite(m2b,0);
+  Serial.println("forward");
+  
+
+}
+}
